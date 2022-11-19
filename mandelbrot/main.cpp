@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <complex.h>
 #include <SFML/Graphics.hpp>
 
 class Fractal {
@@ -14,7 +15,7 @@ public:
 		// window.setFramerateLimit(120);
 		}
 	Fractal(unsigned width, unsigned height): Fractal(width, height, "Mandelbrot set") {}
-	Fractal(): Fractal(2000, 1500, "Mandelbrot set") {};
+	Fractal(): Fractal(800, 600, "Mandelbrot set") {};
 
 	void show(){
 
@@ -26,20 +27,42 @@ public:
 		window.setView(view);
 	}
 
+    void iterate(int x0=0, int y0=0){
+        double y_max = view.getSize().y;
+        double x_max = view.getSize().x;
+        for (int y = 0; y < y_max; y++){
+            for (int x = 0; x < x_max; x++){
+                unsigned iterations = 0;
+                std::complex<double> z(0);
+                while (std::norm(z) < 4 && iterations < 100){
+                    z = z * z + std::complex<double>(x - x_max/2, y - y_max/2) * (double)0.0002f;
+                    iterations++;
+                }
+                int r = 255 * iterations * 0.01;
+                int g = 255 * iterations * 0.007;
+                int b = 255 * iterations * 0.01;
+                sf::Vertex point(sf::Vector2f(x, y), sf::Color(r, g, b));
+                window.draw(&point, 1, sf::Points);
+                // std::cout << x << ' ' << y << std::endl;
+            }
+        }
+    }
 
 	int poll(){
-		sf::Texture texture;
-		if (!texture.loadFromFile("cute_image.jpeg"))
-			return EXIT_FAILURE;
-		sf::Sprite sprite(texture);
-		// Create a graphical text to display
-		sf::Font font;
-		if (!font.loadFromFile("arial.ttf"))
-			return EXIT_FAILURE;
-		sf::Text text("Hello SFML", font, 50);
+		// sf::Texture texture;
+		// if (!texture.loadFromFile("cute_image.jpeg"))
+		// 	return EXIT_FAILURE;
+		// sf::Sprite sprite(texture);
+		// // Create a graphical text to display
+		// sf::Font font;
+		// if (!font.loadFromFile("arial.ttf"))
+		// 	return EXIT_FAILURE;
+		// sf::Text text("Hello SFML", font, 50);
 		float scale_param = 1.001f;
 		float rescale = scale_param;
 		bool pressed = false;
+                
+
 		while (window.isOpen())
     	{
 			sf::Event event;
@@ -78,14 +101,14 @@ public:
 				// }
 					
 			}
-			// Clear screen
-			window.clear();
-			// Draw the sprite
-			window.draw(sprite);
-			// Draw the string
-			window.draw(text);
-			// Update the window
-			window.display();
+            iterate();
+
+            			// window.draw(sprite);
+			// window.draw(text);
+            window.display();
+			// window.clear();
+
+			
     	}
 		return EXIT_SUCCESS;
 	}
