@@ -18,17 +18,6 @@ private:
     sf::Uint8 *pixels;
     sf::Image image;
 
-public:
-	Fractal(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0,  std::string title): width(width), height(height), window(sf::VideoMode(width, height), title), max_iterations(max_iterations), x0(x0), y0(y0), scale_param(1.5),
-																												 start_scale(1 / (2 * 1e-6 * width)), scale(1 / (2 * 1e-6 * fmax(width, height))), pixels(new sf::Uint8[width * height * 4]) {}
-	Fractal(unsigned width, unsigned height): Fractal(width, height, 50, 0, 0, "Mandelbrot set") {}
-	Fractal(): Fractal(1500, 1000) {}
-
-	Fractal(Fractal&) = delete;
-	Fractal(Fractal&&) = delete;
-	Fractal operator =(Fractal&) = delete;
-	Fractal operator =(Fractal&&) = delete;
-
 	void rescale(double k){
 		scale *= k;	
 	}
@@ -74,8 +63,8 @@ public:
 	}
 
     void iterate(){
-        int y_max = window.getSize().y;
-        int x_max = window.getSize().x;
+        int y_max = height;
+        int x_max = width;
 
         for (int y = 0; y < y_max; y++){
             for (int x = 0; x < x_max; x++){
@@ -93,19 +82,34 @@ public:
                     yc = yy;
                 }
 
-				double t = (double)(iterations - 1)/(double)max_iterations;
-
-                int g = 255 * (1 - t) * t * 4;
-                int r = 150 * (1 - t) * t * 4;
-                int b = 240 * (1 - t) * t * 4;
-
-                pixels[4 * (x_max * y + x)] = r;
-                pixels[4 * (x_max * y + x) + 1] = g;
-                pixels[4 * (x_max * y + x) + 2] = b;
-                pixels[4 * (x_max * y + x) + 3] = 255;
+				set_color(x, y, iterations);
             }
         }
     }
+
+	void set_color(int x, int y, unsigned iterations){
+		double t = (double)(iterations - 1)/(double)max_iterations;
+
+		int g = 255 * (1 - t) * t * 4;
+		int r = 150 * (1 - t) * t * 4;
+		int b = 240 * (1 - t) * t * 4;
+
+		pixels[4 * (width * y + x)] = r;
+		pixels[4 * (width * y + x) + 1] = g;
+		pixels[4 * (width * y + x) + 2] = b;
+		pixels[4 * (width * y + x) + 3] = 255;
+	}
+
+public:
+	Fractal(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0,  std::string title): width(width), height(height), window(sf::VideoMode(width, height), title), max_iterations(max_iterations), x0(x0), y0(y0), scale_param(1.5),
+																												 start_scale(1 / (2 * 1e-6 * width)), scale(1 / (2 * 1e-6 * fmax(width, height))), pixels(new sf::Uint8[width * height * 4]) {}
+	Fractal(unsigned width, unsigned height): Fractal(width, height, 50, 0, 0, "Mandelbrot set") {}
+	Fractal(): Fractal(1500, 1000) {}
+
+	Fractal(Fractal&) = delete;
+	Fractal(Fractal&&) = delete;
+	Fractal operator =(Fractal&) = delete;
+	Fractal operator =(Fractal&&) = delete;
 
 	int poll(){
 		sf::Font font;
@@ -120,7 +124,7 @@ public:
 		precText.setCharacterSize(24);
 
         sf::Texture texture;
-        texture.create(window.getSize().x, window.getSize().y);
+        texture.create(width, height);
         sf::Sprite sprite;
 
 		iterate();
