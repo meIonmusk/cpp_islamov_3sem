@@ -5,6 +5,7 @@ Here manual for launch and using but also documentation and instruction are give
 
 ### Launch
 To compile (MacOS) the code use following command
+
 ``
 g++ -std=c++17 window.cpp -I/opt/local/include/ /opt/local/lib/libsfml-graphics.dylib /opt/local/lib/libsfml-audio.dylib  /opt/local/lib/libsfml-window.dylib /opt/local/lib/libsfml-system.dylib
 ``
