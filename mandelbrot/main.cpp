@@ -20,6 +20,10 @@
 #include "Fractal.hpp"
 
 int main(){
-	MandelbrotSet mandelbrot(1500, 1000, 50, 0, 0, "Mandelbrot");
-	return mandelbrot.poll();
+	MandelbrotSet *mandelbrot = new MandelbrotSet(1500, 1000, 50, 0, 0);
+	FractalRenderer fractalrenderer(mandelbrot);
+
+	int code = fractalrenderer.poll();
+	delete mandelbrot;
+	return code;
 }

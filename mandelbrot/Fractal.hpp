@@ -11,13 +11,13 @@
 #include <complex.h>
 #include <SFML/Graphics.hpp>
 
+
 /**
  * Fractal is abstract class that used for creating and rendering other fractal sets and keeps information about window, max iterations count and zooming parameter.
  * Override Fractal::iterate and use Fractall::poll to render your fractal set.
- */
+*/
 class Fractal {
 protected:
-	sf::RenderWindow window;
 	unsigned max_iterations;
 	double x0;
 	double y0;
@@ -25,9 +25,10 @@ protected:
 	const double start_scale;
 	const double scale_param;
 	const int width, height;
-    sf::Uint8 *pixels;
-    sf::Image image;
-	int colors[4];
+    double *iterations_array = nullptr;
+
+    friend class FractalRenderer;
+
 	/**
 	 * Rescales the scale parameter that is used for zooming a view.
 	 * 
@@ -36,96 +37,18 @@ protected:
 	*/
 	void rescale(double k) {
 		if (!k){
-			delete [] pixels;
+            if (!iterations_array)
+			    delete [] iterations_array;
 			throw std::invalid_argument("Scaling parameter cannot be zero.");
 		}
 	    scale *= k;	
 	}
 
 	/**
-	 * Handles keyboard events. It can move the center of view, change max iterations count, rescale the view and reset settings. 
-	*/
-	void keyboard_handle() {
-		double k = 0.2 / scale * start_scale ;
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			x0-=k;
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			x0+=k;
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			y0 += k;
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			y0 -= k;
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Equal))
-			max_iterations += 10;
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
-			if (max_iterations > 0)
-				max_iterations -= 10;
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
-			rescale(scale_param);
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift) && scale / start_scale > 0.5f)
-			rescale(1 / scale_param);
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
-		{
-			scale = start_scale;
-			x0 = 0;
-			y0 = 0;
-		}
-	}
-
-	/**
-	 * Handles mouse events. Can zoom and move the view to the cursor where the button was pressed.
-	*/
-	void mouse_handle(){
-		sf::Vector2i posPixel = sf::Mouse::getPosition(window);
-		sf::Vector2f pos = window.mapPixelToCoords(posPixel);
-		x0 += (-(double)pos.x + (double)window.getSize().x / 2) / scale;
-        y0 += (-(double)pos.y + (double)window.getSize().y / 2) / scale;
-	
-		rescale(scale_param);
-	}
-
-	/**
 	 * Virtual function that must be overriden for each subclass for correct rendering.
 	*/
-    virtual void iterate() = 0;
-    
-	/**
-	 * Sets the color of pixel with coordinate (x, y) associated with rgb_colorscheme.
-	 * 
-	 * @param x horisontal coordinate of pixel.
-	 * @param y vertical coordinate of pixel.
-	 * @param iterations number of iterations that was made at this point.
-	*/
-	virtual void set_color(int x, int y, unsigned iterations) {
-		double t = (double)(iterations - 1)/(double)max_iterations;
-
-		rgba_colorscheme(t);
-		pixels[4 * (width * y + x)] = colors[0];
-		pixels[4 * (width * y + x) + 1] = colors[1];
-		pixels[4 * (width * y + x) + 2] = colors[2];
-		pixels[4 * (width * y + x) + 3] = colors[3];
-	}
-
-	/** 
-	 * Maps some value to the RGBA colorscheme.
-	 * 
-	 * @param t the value which will be mapped to the color.
-	 * 
-	 * @return int[4] array that keeps RGBA color.
-	*/
-	virtual int* rgba_colorscheme(double t) {
-		colors[0] = 150 * (1 - t) * t * 4;
-		colors[1] = 255 * (1 - t) * t * 4;
-		colors[2] = 240 * (1 - t) * t * 4;
-		colors[3] = 255;
-
-		return colors;
-	}
-
+    virtual void iterate(int x, int y) = 0;
+   
 public:
 	/**
 	 * Main constructor of the class. 
@@ -137,22 +60,163 @@ public:
 	 * @param y0 imaginary part of center of the sample. 
 	 * @param title title of the window.
 	*/
-	Fractal(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0,  std::string title): width(width), height(height), window(sf::VideoMode(width, height), title), max_iterations(max_iterations), x0(x0), y0(y0), scale_param(2),
-																												 start_scale(1 / (2 * 1e-6 * width)), scale(1 / (2 * 1e-6 * fmax(width, height))), pixels(new sf::Uint8[width * height * 4]) {}
-	Fractal(unsigned width, unsigned height): Fractal(width, height, 50, 0, 0, "Mandelbrot set") {}
+	Fractal(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0): width(width), height(height), max_iterations(max_iterations), x0(x0), y0(y0), scale_param(2),
+																												 start_scale(1 / (2 * 1e-6 * width)), scale(1 / (2 * 1e-6 * fmax(width, height))), iterations_array(new double[width * height]) {}
+	Fractal(unsigned width, unsigned height): Fractal(width, height, 50, 0, 0) {}
 	Fractal(): Fractal(1500, 1000) {}
 
-	Fractal(Fractal&) = delete;
-	Fractal(Fractal&&) = delete;
+	Fractal(Fractal&) = default;
+	Fractal(Fractal&&) = default;
+
+    unsigned getWidth(){ return width; }
+    unsigned getHeight(){ return height; }
+
 	// Fractal operator =(Fractal&) = delete;
 	// Fractal operator =(Fractal&&) = delete;
 
+	
 	/**
-	 * The main method that polls the image and responds to any events.
-	 * 
-	 * @return information about successfully ending the polling (if program was aborted it doesn't return anything).
+	 * Destructor of the class. Closes the window and deletes dynamic array of pixels.
 	*/
-	int poll(){
+	~Fractal(){
+        if (!iterations_array)
+            delete [] iterations_array;
+	}
+};
+
+#endif
+
+#ifndef MANDELBROT 
+#define MANDELBROT
+
+/**
+ * Subclass of Fractal class that enures for rendering mandelbrot set.
+*/
+class MandelbrotSet: public Fractal {
+protected:
+	/**
+	 * Overriden method that processing each pixel and colors it with RGBA colorscheme.
+	*/
+	void iterate(int x, int y) override {
+        
+        unsigned iterations = 0;
+        
+        double xc = 0;
+        double yc = 0;
+        double xx = 0;
+        double yy = 0;
+
+        while (xc * xc + yc * yc < 4 && iterations++ < max_iterations){
+            xx = xc * xc - yc * yc + (x - width/2) / scale - x0;
+            yy = 2 * xc * yc + (y - height/2) / scale  - y0;
+            xc = xx;
+            yc = yy;
+        }
+        
+        iterations_array[width * y + x] = (double)(iterations - 1) / (double)max_iterations;
+    }
+
+public:
+	/**
+	 * Main constructor of the class. 
+	 * 
+	 * @param width width of the window in pixels.
+	 * @param height height of the window in pixels. 
+	 * @param max_iterations max allowed number of iterations.
+	 * @param x0 real part of center of the sample. 
+	 * @param y0 imaginary part of center of the sample. 
+	*/
+	MandelbrotSet(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0): Fractal(width, height, max_iterations, x0, y0) {}
+	MandelbrotSet(unsigned width, unsigned height): MandelbrotSet(width, height, 50, 0, 0) {}
+	MandelbrotSet(): MandelbrotSet(1500, 1000) {}
+
+    ~MandelbrotSet() = default;
+};
+
+#endif
+
+class FractalRenderer {
+protected:
+    sf::RenderWindow window;
+    sf::Uint8 *pixels = nullptr;
+    unsigned width, height;
+    int colors[4];
+    Fractal *fractal;
+
+    virtual void rgba_colorscheme(double t) {
+		colors[0] = 150 * (1 - t) * t * 4;
+		colors[1] = 255 * (1 - t) * t * 4;
+		colors[2] = 240 * (1 - t) * t * 4;
+		colors[3] = 255;
+	}
+
+    virtual void set_color(int x, int y, double t) {
+		rgba_colorscheme(t);
+		pixels[4 * (width * y + x)] = colors[0];
+		pixels[4 * (width * y + x) + 1] = colors[1];
+		pixels[4 * (width * y + x) + 2] = colors[2];
+		pixels[4 * (width * y + x) + 3] = colors[3];
+	}
+
+    void mouse_handle(){
+		sf::Vector2i posPixel = sf::Mouse::getPosition(window);
+		sf::Vector2f pos = window.mapPixelToCoords(posPixel);
+		fractal->x0 += (-(double)pos.x + (double)width / 2) / fractal->scale;
+        fractal->y0 += (-(double)pos.y + (double)height / 2) / fractal->scale;
+	
+		fractal->rescale(fractal->scale_param);
+	}
+
+    void keyboard_handle() {
+		double k = 0.2 / fractal->scale * fractal->start_scale ;
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+			fractal->x0-=k;
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+			fractal->x0+=k;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+			fractal->y0 += k;
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+			fractal->y0 -= k;
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Equal))
+			fractal->max_iterations += 10;
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
+			if (fractal->max_iterations > 0)
+				fractal->max_iterations -= 10;
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+			fractal->rescale(fractal->scale_param);
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift) && fractal->scale / fractal->start_scale > 0.5f)
+			fractal->rescale(1 / fractal->scale_param);
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+		{
+			fractal->scale = fractal->start_scale;
+			fractal->x0 = 0;
+			fractal->y0 = 0;
+		}
+	}
+
+    // MandelbrotSet manSet;
+
+public: 
+    FractalRenderer(Fractal *fractal): fractal(fractal), height(fractal->getHeight()), width(fractal->getWidth()), window(sf::VideoMode(fractal->getWidth(), fractal->getHeight()), "title"), pixels(new sf::Uint8[fractal->getWidth() * fractal->getHeight() * 4]) {}
+
+    void set_pixels() {
+        for (unsigned y = 0; y < height; y++)
+            for (unsigned x = 0; x < width; x++)
+                set_pixel(x, y);
+    }
+
+    void set_pixel(int x, int y) {
+        fractal->iterate(x, y);
+        
+        set_color(x, y, (double) (fractal->iterations_array[width * y + x]));
+
+    }
+
+    int poll(){
 		sf::Font font;
 		font.loadFromFile("arial.ttf");
 
@@ -168,7 +232,8 @@ public:
         texture.create(width, height);
         sf::Sprite sprite;
 
-		iterate();
+		set_pixels();
+	// std::cout << "test" << std::endl;
 
 		while (window.isOpen())
     	{
@@ -180,12 +245,12 @@ public:
 				else if (event.type == sf::Event::KeyPressed)
 				{
 					keyboard_handle();
-                    iterate();
+                    set_pixels();
 				}
 
                 else if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
 					mouse_handle();
-                    iterate();
+                    set_pixels();
 				}
 			}
 
@@ -196,8 +261,8 @@ public:
             sprite.setTexture(texture);
             window.draw(sprite);
 
-			zoomText.setString("Zoom: " + std::to_string(scale / start_scale));
-			precText.setString("Max. iterations: " + std::to_string(max_iterations));
+			zoomText.setString("Zoom: " + std::to_string(fractal->scale / fractal->start_scale));
+			precText.setString("Max. iterations: " + std::to_string(fractal->max_iterations));
 			precText.setPosition(sf::Vector2f(0, 32));
 			window.draw(zoomText);
 			window.draw(precText);	
@@ -206,68 +271,8 @@ public:
     	}
 		return EXIT_SUCCESS;
 	}
-
-	/**
-	 * Destructor of the class. Closes the window and deletes the pixels dynamic array.
-	*/
-	~Fractal(){
-		window.close();
+    ~FractalRenderer() {
+        window.close();
         delete [] pixels;
-	}
-};
-
-#endif
-
-#ifndef MANDELBROT 
-#define MANDELBROT
-
-/**
- * Subclass for Fractal class that renders mandelbrot set.
-*/
-class MandelbrotSet: public Fractal {
-protected:
-	/**
-	 * Overriden method that processing each pixel and colors it with RGBA colorscheme.
-	*/
-	void iterate() override {
-        int y_max = height;
-        int x_max = width;
-
-        for (int y = 0; y < y_max; y++){
-            for (int x = 0; x < x_max; x++){
-                unsigned iterations = 0;
-               
-                double xc = 0;
-                double yc = 0;
-                double xx = 0;
-                double yy = 0;
-
-                while (xc * xc + yc * yc < 4 && iterations++ < max_iterations){
-                    xx = xc * xc - yc * yc + (x - x_max/2) / scale - x0;
-                    yy = 2 * xc * yc + (y - y_max/2) / scale  - y0;
-                    xc = xx;
-                    yc = yy;
-                }
-
-				set_color(x, y, iterations);
-            }
-        }
     }
-
-public:
-	/**
-	 * Main constructor of the class. 
-	 * 
-	 * @param width width of the window in pixels.
-	 * @param height height of the window in pixels. 
-	 * @param max_iterations max allowed number of iterations.
-	 * @param x0 real part of center of the sample. 
-	 * @param y0 imaginary part of center of the sample. 
-	 * @param title title of the window.
-	*/
-	MandelbrotSet(unsigned width, unsigned height, unsigned max_iterations, double x0, double y0,  std::string title): Fractal(width, height, max_iterations, x0, y0, title) {}
-	MandelbrotSet(unsigned width, unsigned height): MandelbrotSet(width, height, 50, 0, 0, "Mandelbrot set") {}
-	MandelbrotSet(): MandelbrotSet(1500, 1000) {}
 };
-
-#endif
