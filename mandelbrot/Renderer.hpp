@@ -64,29 +64,29 @@ private:
 	/**
 	 * Handles keyboard events. It can move the center of view, change max iterations count, rescale the view and reset settings. 
 	*/
-    void keyboardHandle() {
+    void keyboardHandle(sf::Event event) {
 		double k = 0.2 * fractal->getStartScale();
         
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+		if (event.key.code == sf::Keyboard::Right)
 			fractal->updateCenterX(-k);
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+		else if (event.key.code == sf::Keyboard::Left)
 			fractal->updateCenterX(k);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+		if (event.key.code == sf::Keyboard::Up)
 			fractal->updateCenterY(k);
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+		else if (event.key.code == sf::Keyboard::Down)
 			fractal->updateCenterY(-k);
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Equal))
+		if (event.key.code == sf::Keyboard::Equal)
 			fractal->updateMaxIterations(10);
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace))
+		else if (event.key.code == sf::Keyboard::Backspace)
 			fractal->updateMaxIterations(-10);
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+		if (event.key.code == sf::Keyboard::Enter)
 			fractal->rescale(scale_param);
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+		else if (event.key.code == sf::Keyboard::RShift)
 			fractal->rescale(1 / scale_param);
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+		if (event.key.code == sf::Keyboard::Escape)
             fractal->reset();
 	}
 
@@ -152,7 +152,7 @@ public:
 					window.close();
 				else if (event.type == sf::Event::KeyPressed)
 				{
-					keyboardHandle();
+					keyboardHandle(event);
                     setPixels();
 				}
 

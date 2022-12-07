@@ -18,6 +18,7 @@
 */
 
 #include "Fractal.hpp"
+#include "Renderer.hpp"
 
 int main(){
 	MandelbrotSet *mandelbrot = new MandelbrotSet(1500, 1000, 50, 0, 0);
