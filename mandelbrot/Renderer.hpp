@@ -29,9 +29,9 @@ private:
 	 * 
 	*/
     virtual void rgbaColorscheme(double t) {
-		colors[0] = 150 * (1 - t) * t * 4;
-		colors[1] = 255 * (1 - t) * t * 4;
-		colors[2] = 240 * (1 - t) * t * 4;
+		colors[1] = 150 * (1 - t) * t * 4;
+		colors[2] = 255 * (1 - t) * t * 4;
+		colors[0] = 200 * (1 - t) * t * 4;
 		colors[3] = 255;
 	}
 
@@ -106,7 +106,7 @@ public:
      * Sets all pixels' colors.
     */
     void setPixels() {
-        for (unsigned y = 0; y < height; y++)
+			for (unsigned y = 0; y < height; y++)
             for (unsigned x = 0; x < width; x++)
                 setPixel(x, y);
     }
